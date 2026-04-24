@@ -1,0 +1,22 @@
+[Unit]
+Description=Jaundice Pi — Neonatal Jaundice Camera Web Server
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/jaundice_webapp
+
+ExecStart=/home/pi/jaundice_webapp/venv/bin/python3 /home/pi/jaundice_webapp/app.py
+
+Restart=always
+RestartSec=5
+
+Environment="PYTHONUNBUFFERED=1"
+Environment="FLASK_ENV=production"
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jaundice-pi
+
+[Install]
+WantedBy=multi-user.target

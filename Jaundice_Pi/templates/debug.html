@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Pipeline Debug{% endblock %}
+
+{% block content %}
+<style>
+  .dbg-hero{text-align:center;padding:2rem 0 1rem;}
+  .dbg-hero h1{font-size:1.6rem;margin:0 0 .4rem;}
+  .dbg-hero p{color:var(--text-muted,#888);margin:0;}
+  .dbg-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 2rem;
+    background:var(--accent,#3b82f6);color:#fff;border:none;border-radius:.6rem;
+    font-size:1rem;font-weight:600;cursor:pointer;margin-top:1.2rem;transition:opacity .2s;}
+  .dbg-btn:disabled{opacity:.5;cursor:not-allowed;}
+  .dbg-spinner{width:1.1rem;height:1.1rem;border:2px solid #fff3;border-top-color:#fff;
+    border-radius:50%;animation:spin .7s linear infinite;display:none;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .dbg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:1.2rem;margin-top:1.8rem;}
+  .dbg-card{background:var(--surface,#1e1e2e);border:1px solid var(--border,#333);
+    border-radius:.8rem;overflow:hidden;}
+  .dbg-card__label{padding:.55rem .8rem;font-size:.78rem;font-weight:700;
+    letter-spacing:.04em;background:var(--surface2,#2a2a3e);color:var(--accent,#3b82f6);}
+  .dbg-card__img{width:100%;display:block;background:#111;}
+  .dbg-card__meta{padding:.45rem .8rem;font-size:.72rem;color:var(--text-muted,#aaa);
+    font-family:monospace;white-space:pre-wrap;word-break:break-all;line-height:1.5;}
+  .dbg-card--stats .dbg-card__meta{font-size:.85rem;color:var(--text,#eee);padding:.8rem;}
+  .dbg-errors{margin-top:1rem;padding:.8rem 1rem;background:#3b0000;border-radius:.6rem;
+    font-size:.8rem;font-family:monospace;color:#f88;white-space:pre-wrap;}
+  .dbg-none{text-align:center;padding:3rem;color:var(--text-muted,#888);}
+  #dbg-status{text-align:center;margin-top:1rem;font-size:.85rem;color:var(--text-muted,#aaa);}
+</style>
+
+<div class="dbg-hero">
+  <h1>🔬 Pipeline Debug View</h1>
+  <p>Captures a frame from the camera and runs every stage, showing the image after each step.</p>
+  {% if not pipeline_available %}
+  <div class="status-banner status-banner--warn" style="margin-top:1rem">
+    ⚠️ Pipeline libraries not installed — debug unavailable.
+  </div>
+  {% else %}
+  <button class="dbg-btn" id="dbg-btn" onclick="runDebug()">
+    <span class="dbg-spinner" id="dbg-spin"></span>
+    <span id="dbg-btn-text">📸 Capture &amp; Run Debug</span>
+  </button>
+  <div id="dbg-status"></div>
+  {% endif %}
+</div>
+
+<div id="dbg-output"></div>
+
+<script>
+async function runDebug() {
+  const btn   = document.getElementById("dbg-btn");
+  const spin  = document.getElementById("dbg-spin");
+  const label = document.getElementById("dbg-btn-text");
+  const out   = document.getElementById("dbg-output");
+  const status = document.getElementById("dbg-status");
+
+  btn.disabled = true;
+  spin.style.display = "block";
+  label.textContent  = "Running pipeline…";
+  status.textContent = "Capturing frame and processing each stage…";
+  out.innerHTML = "";
+
+  try {
+    const res  = await fetch("/debug_pipeline", { method: "POST" });
+    const data = await res.json();
+
+    if (data.error) {
+      out.innerHTML = `<div class="dbg-errors">❌ ${data.error}</div>`;
+      return;
+    }
+
+    // ── Render stage cards ──────────────────────────────────────────────
+    let html = '<div class="dbg-grid">';
+    for (const s of data.stages) {
+      if (s.img) {
+        html += `
+          <div class="dbg-card">
+            <div class="dbg-card__label">${s.label}</div>
+            <img class="dbg-card__img" src="${s.img}" alt="${s.label}" loading="lazy"/>
+            ${s.meta ? `<div class="dbg-card__meta">${s.meta}</div>` : ""}
+          </div>`;
+      } else if (s.meta) {
+        // Stats-only card (no image)
+        html += `
+          <div class="dbg-card dbg-card--stats">
+            <div class="dbg-card__label">${s.label}</div>
+            <div class="dbg-card__meta">${s.meta}</div>
+          </div>`;
+      }
+    }
+    html += "</div>";
+
+    // ── Errors block ───────────────────────────────────────────────────
+    if (Object.keys(data.errors).length) {
+      html += `<div class="dbg-errors">⚠️ Stage errors:\n`;
+      for (const [k, v] of Object.entries(data.errors)) {
+        html += `  ${k}: ${v}\n`;
+      }
+      html += `</div>`;
+    }
+
+    out.innerHTML = html;
+    status.textContent = `✅ Done — ${data.stages.length} stages rendered.`;
+
+  } catch(err) {
+    out.innerHTML = `<div class="dbg-errors">❌ Network error: ${err.message}</div>`;
+    status.textContent = "";
+  } finally {
+    btn.disabled = false;
+    spin.style.display = "none";
+    label.textContent  = "📸 Capture & Run Debug";
+  }
+}
+</script>
+{% endblock %}

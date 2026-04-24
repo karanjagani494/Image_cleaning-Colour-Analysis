@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Capture{% endblock %}
+
+{% block content %}
+<section class="capture" id="capture-section">
+    <h1 class="capture__title">Camera Preview</h1>
+    <p class="capture__subtitle">Position the body part in the frame, label it, and capture.</p>
+
+    <!-- Pipeline / CCM status banner -->
+    {% if not pipeline_available %}
+    <div class="status-banner status-banner--warn">
+        ⚠️ Pipeline libraries not installed — raw capture only.
+        Run <code>pip install -r requirements.txt</code> to enable processing.
+    </div>
+    {% elif not ccm_ready %}
+    <div class="status-banner status-banner--warn">
+        ⚠️ Camera not yet calibrated.
+        <a href="/calibrate" class="status-banner__link">Run calibration →</a>
+    </div>
+    {% else %}
+    <div class="status-banner status-banner--ok">
+        ✅ Pipeline ready — colour calibration loaded.
+    </div>
+    {% endif %}
+
+    <!-- Live camera feed -->
+    <div class="capture__preview" id="camera-preview">
+        <div class="capture__loading" id="camera-loading">
+            <span class="capture__loading-spinner"></span>
+            <span>Connecting to camera…</span>
+        </div>
+        <img src="" alt="Live camera feed"
+             class="capture__video capture__video--hidden" id="camera-feed" />
+        <div class="capture__flash" id="capture-flash"></div>
+    </div>
+
+    <!-- Controls -->
+    <form class="capture__controls" id="capture-form" onsubmit="return false;">
+        <div class="input-group">
+            <label for="body-part-input" class="input-group__label">Body Part Location</label>
+            <input type="text" id="body-part-input" class="input-group__field"
+                   placeholder="e.g. Left Arm, Right Knee…"
+                   autocomplete="off" required />
+        </div>
+        <button type="button" class="btn btn--primary" id="capture-btn" onclick="captureImage()">
+            <span class="btn__icon">📸</span>
+            Capture &amp; Analyse
+        </button>
+    </form>
+
+    <!-- Pipeline results panel (hidden until a capture completes) -->
+    <div class="results-panel" id="results-panel" style="display:none;">
+        <div class="results-panel__header">
+            <span class="results-panel__icon">🔬</span>
+            <span class="results-panel__title">Analysis Results</span>
+            <span class="results-panel__body-part" id="result-body-part"></span>
+        </div>
+        <div class="results-panel__stats">
+            <div class="stat-card">
+                <div class="stat-card__label">L* (Lightness)</div>
+                <div class="stat-card__value" id="stat-L">—</div>
+                <div class="stat-card__std"   id="stat-L-std"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card__label">a* (Red–Green)</div>
+                <div class="stat-card__value" id="stat-a">—</div>
+                <div class="stat-card__std"   id="stat-a-std"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card__label">b* (Yellow–Blue)</div>
+                <div class="stat-card__value" id="stat-b">—</div>
+                <div class="stat-card__std"   id="stat-b-std"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card__label">Skin Coverage</div>
+                <div class="stat-card__value" id="stat-coverage">—</div>
+                <div class="stat-card__std">of ROI</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card__label">b* Uniformity (CV)</div>
+                <div class="stat-card__value" id="stat-cv-b">—</div>
+                <div class="stat-card__std">lower = more uniform</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card__label">SSIM Quality</div>
+                <div class="stat-card__value" id="stat-ssim">—</div>
+                <div class="stat-card__std">raw vs processed</div>
+            </div>
+        </div>
+        <div class="results-panel__swatch-row">
+            <div class="swatch-block">
+                <div class="swatch-block__label">Measured Skin Colour</div>
+                <div class="swatch-block__preview" id="swatch-preview"></div>
+            </div>
+            <div class="results-panel__timings" id="results-timings"></div>
+        </div>
+        <div class="results-panel__thumb-row" id="results-thumb-row" style="display:none;">
+            <span class="results-panel__thumb-label">Processed image:</span>
+            <a id="results-thumb-link" href="#" target="_blank">
+                <img id="results-thumb" src="" alt="Processed" class="results-panel__thumb" />
+            </a>
+        </div>
+    </div>
+
+    <!-- Pipeline error panel -->
+    <div class="pipeline-error" id="pipeline-error" style="display:none;">
+        <span>⚠️</span>
+        <span id="pipeline-error-msg"></span>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", initCameraFeed);
+
+function initCameraFeed() {
+    const feed    = document.getElementById("camera-feed");
+    const loading = document.getElementById("camera-loading");
+    const preview = document.getElementById("camera-preview");
+
+    // Keep the preview box a fixed height so it never collapses
+    if (preview) preview.style.minHeight = "360px";
+
+    feed.src = "{{ url_for('video_feed') }}";
+
+    // Show feed after 3s — MJPEG streams don't fire load reliably.
+    // 3s gives USB cameras enough time to warm up and deliver first frame.
+    setTimeout(() => {
+        feed.classList.remove("capture__video--hidden");
+        if (loading) loading.style.display = "none";
+    }, 3000);
+
+    feed.addEventListener("error", function () {
+        if (loading)
+            loading.innerHTML = '<span style="font-size:1.5rem">📷</span><span>Camera not available</span>';
+    });
+}
+</script>
+{% endblock %}

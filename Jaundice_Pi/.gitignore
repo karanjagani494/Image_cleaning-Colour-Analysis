@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Runtime data (captured/processed images & results)
+data/raw_images/
+data/processed_images/
+data/results/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

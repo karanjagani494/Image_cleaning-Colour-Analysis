@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Gallery{% endblock %}
+
+{% block content %}
+<section class="gallery" id="gallery-section">
+    <h1 class="gallery__title">Processed Images</h1>
+    <p class="gallery__subtitle">Click any image to view it full-size.</p>
+
+    {% if images %}
+    <div class="gallery__grid" id="gallery-grid">
+        {% for img in images %}
+        <div class="gallery__card" onclick="openLightbox('{{ img.url }}', '{{ img.filename }}')">
+            <img src="{{ img.url }}" alt="{{ img.filename }}"
+                 class="gallery__thumb" loading="lazy" />
+            <div class="gallery__info">
+                <span class="gallery__name" title="{{ img.filename }}">{{ img.filename }}</span>
+                <span class="gallery__date">{{ img.modified }}</span>
+                {% if img.stats %}
+                <div class="gallery__lab">
+                    <span class="lab-chip lab-chip--L" title="Lightness">L* {{ img.stats.mean_L }}</span>
+                    <span class="lab-chip lab-chip--a" title="Red-Green">a* {{ img.stats.mean_a }}</span>
+                    <span class="lab-chip lab-chip--b" title="Yellow-Blue">b* {{ img.stats.mean_b }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="gallery__empty">
+        <span class="gallery__empty-icon">🖼️</span>
+        <p>No processed images yet.</p>
+        <p class="gallery__empty-hint">
+            Go to <a href="/" style="color:var(--accent)">Capture</a> to take and analyse your first image.
+        </p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- Lightbox overlay -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+    <button class="lightbox__close" aria-label="Close" onclick="closeLightbox(event)">&times;</button>
+    <img src="" alt="" class="lightbox__img" id="lightbox-img" />
+    <p class="lightbox__caption" id="lightbox-caption"></p>
+</div>
+{% endblock %}

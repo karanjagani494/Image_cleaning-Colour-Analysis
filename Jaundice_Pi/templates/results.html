@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Results{% endblock %}
+
+{% block content %}
+<section class="gallery" id="results-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+        <div>
+            <h1 class="gallery__title">Measurement Results</h1>
+            <p class="gallery__subtitle">All Lab colour readings logged from the pipeline.</p>
+        </div>
+        {% if rows %}
+        <a href="/export/metadata.xlsx" class="btn btn--primary" style="text-decoration:none;">
+            <span class="btn__icon">⬇️</span> Export Excel
+        </a>
+        {% endif %}
+    </div>
+
+    {% if rows %}
+    <!-- Summary stats bar -->
+    <div class="results-summary" id="results-summary">
+        <div class="summary-chip">
+            <span class="summary-chip__label">Total readings</span>
+            <span class="summary-chip__val">{{ rows | length }}</span>
+        </div>
+        <div class="summary-chip">
+            <span class="summary-chip__label">Mean L*</span>
+            <span class="summary-chip__val" id="sum-L">—</span>
+        </div>
+        <div class="summary-chip">
+            <span class="summary-chip__label">Mean a*</span>
+            <span class="summary-chip__val" id="sum-a">—</span>
+        </div>
+        <div class="summary-chip">
+            <span class="summary-chip__label">Mean b*</span>
+            <span class="summary-chip__val" id="sum-b">—</span>
+        </div>
+    </div>
+
+    <!-- Data table -->
+    <div class="results-table-wrap">
+        <table class="results-table" id="results-table">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Filename</th>
+                    <th>L* <small>(mean ± std)</small></th>
+                    <th>a* <small>(mean ± std)</small></th>
+                    <th>b* <small>(mean ± std)</small></th>
+                    <th>Colour</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr id="row-{{ loop.index }}">
+                    <td>
+                        {% if row.url %}
+                        <img src="{{ row.url }}" alt="{{ row.image_name }}"
+                             class="results-table__thumb"
+                             onerror="this.onerror=null;this.src='';this.outerHTML='<span class=\'results-table__missing\' title=\'File deleted from disk\'>⚠️</span>';"
+                             onclick="openLightbox('{{ row.url }}', '{{ row.image_name }}')" />
+                        {% else %}
+                        <span class="results-table__no-img">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="results-table__name" title="{{ row.image_name }}">
+                        {{ row.image_name }}
+                    </td>
+                    <td>
+                        <span class="lab-val">{{ row.mean_L }}</span>
+                        <span class="lab-std">± {{ row.std_L }}</span>
+                    </td>
+                    <td>
+                        <span class="lab-val lab-val--a">{{ row.mean_a }}</span>
+                        <span class="lab-std">± {{ row.std_a }}</span>
+                    </td>
+                    <td>
+                        <span class="lab-val lab-val--b">{{ row.mean_b }}</span>
+                        <span class="lab-std">± {{ row.std_b }}</span>
+                    </td>
+                    <td>
+                        <div class="results-table__swatch"
+                             data-l="{{ row.mean_L }}"
+                             data-a="{{ row.mean_a }}"
+                             data-b="{{ row.mean_b }}">
+                        </div>
+                    </td>
+                    <td>
+                        <button class="btn-delete"
+                                onclick="deleteImage('{{ row.image_name }}', 'row-{{ loop.index }}')"
+                                title="Delete this image">🗑</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div class="gallery__empty">
+        <span class="gallery__empty-icon">📊</span>
+        <p>No measurements yet.</p>
+        <p class="gallery__empty-hint">
+            Go to <a href="/" style="color:var(--accent)">Capture</a> to take your first reading.
+        </p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+    <button class="lightbox__close" aria-label="Close" onclick="closeLightbox(event)">&times;</button>
+    <img src="" alt="" class="lightbox__img" id="lightbox-img" />
+    <p class="lightbox__caption" id="lightbox-caption"></p>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ── Compute summary stats ───────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+    const rows = {{ rows | tojson }};
+    if (!rows.length) return;
+    const avg = key => (rows.reduce((s, r) => s + r[key], 0) / rows.length).toFixed(2);
+    document.getElementById("sum-L").textContent = avg("mean_L");
+    document.getElementById("sum-a").textContent = avg("mean_a");
+    document.getElementById("sum-b").textContent = avg("mean_b");
+
+    // Fill colour swatches by converting Lab → approx RGB via CSS
+    document.querySelectorAll(".results-table__swatch").forEach(el => {
+        const L = parseFloat(el.dataset.l);
+        const a = parseFloat(el.dataset.a);
+        const b = parseFloat(el.dataset.b);
+        // Rough Lab→RGB approximation for display only (not colour-accurate)
+        const r = Math.min(255, Math.max(0, Math.round((L + 1.14 * b) * 2.55)));
+        const g = Math.min(255, Math.max(0, Math.round((L - 0.395 * a - 0.581 * b) * 2.55)));
+        const bv = Math.min(255, Math.max(0, Math.round((L + 2.032 * a) * 2.55)));
+        el.style.background = `rgb(${r},${g},${bv})`;
+    });
+});
+
+// ── Delete image ────────────────────────────────────────────
+async function deleteImage(filename, rowId) {
+    if (!confirm(`Delete "${filename}"? This cannot be undone.`)) return;
+    try {
+        const fd = new FormData();
+        fd.append("filename", filename);
+        const res  = await fetch("/delete_image", { method: "POST", body: fd });
+        const data = await res.json();
+        if (data.success) {
+            const row = document.getElementById(rowId);
+            if (row) row.remove();
+            showToast(`🗑 Deleted: ${filename}`, "success");
+        } else {
+            showToast(`❌ ${data.error}`, "error");
+        }
+    } catch (err) {
+        showToast(`❌ Network error: ${err.message}`, "error");
+    }
+}
+</script>
+{% endblock %}

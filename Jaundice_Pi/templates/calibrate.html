@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Calibrate{% endblock %}
+
+{% block content %}
+<section class="capture" id="calibrate-section">
+    <h1 class="capture__title">Colour Calibration</h1>
+    <p class="capture__subtitle">
+        Build the Colour Correction Matrix (CCM) from your DGK 18-patch colour card.
+    </p>
+
+    {% if not pipeline_available %}
+    <div class="status-banner status-banner--warn">
+        ⚠️ Pipeline libraries are not installed.
+        Run <code>pip install -r requirements.txt</code> on the Pi first.
+    </div>
+    {% else %}
+    <div class="status-banner status-banner--ok" id="calib-status">
+        📋 Run calibration from the terminal on the Pi:
+    </div>
+
+    <div class="calib-instructions">
+        <p>Calibration requires interactive ROI selection and cannot run in the browser. Run this command on the Raspberry Pi terminal:</p>
+        <pre class="calib-cmd">cd ~/jaundice_webapp
+python src/colour_calib/calibrate.py</pre>
+        <p>Follow the on-screen instructions to capture each of the 18 colour card patches. When complete, refresh this page — the pipeline will be ready.</p>
+
+        <div class="calib-steps">
+            <div class="calib-step">
+                <span class="calib-step__num">1</span>
+                <span>Open a terminal on the Raspberry Pi</span>
+            </div>
+            <div class="calib-step">
+                <span class="calib-step__num">2</span>
+                <span>Run <code>python src/colour_calib/calibrate.py</code></span>
+            </div>
+            <div class="calib-step">
+                <span class="calib-step__num">3</span>
+                <span>For each patch: point the camera, press SPACE, draw ROI, press ENTER</span>
+            </div>
+            <div class="calib-step">
+                <span class="calib-step__num">4</span>
+                <span>CCM is saved automatically to <code>data/results/ccm.npz</code></span>
+            </div>
+            <div class="calib-step">
+                <span class="calib-step__num">5</span>
+                <span>Return to <a href="/" style="color:var(--accent)">Capture</a> — the pipeline will be active</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

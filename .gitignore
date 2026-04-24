@@ -1,0 +1,26 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+
+# MATLAB
+*.asv
+*.mex*
+
+# Data / outputs (runtime generated)
+Jaundice_Pi/data/raw_images/
+Jaundice_Pi/data/processed_images/
+Jaundice_Pi/data/results/
+Prototype/data/raw_images/
+Prototype/data/processed_images/
+Prototype/data/results/
+
+# Claude Code internals
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

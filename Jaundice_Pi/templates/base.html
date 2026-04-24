@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Neonatal jaundice skin colour analysis — Raspberry Pi camera app." />
+    <title>{% block title %}Camera App{% endblock %} — Jaundice Pi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="navbar__brand">
+            <span class="navbar__icon">📷</span>
+            <span>Jaundice Pi</span>
+        </a>
+        <ul class="navbar__links">
+            <li>
+                <a href="/" class="navbar__link {% if request.path == '/' %}navbar__link--active{% endif %}">
+                    Capture
+                </a>
+            </li>
+            <li>
+                <a href="/gallery" class="navbar__link {% if request.path == '/gallery' %}navbar__link--active{% endif %}">
+                    Gallery
+                </a>
+            </li>
+            <li>
+                <a href="/results" class="navbar__link {% if request.path == '/results' %}navbar__link--active{% endif %}">
+                    Results
+                </a>
+            </li>
+            <li>
+                <a href="/calibrate" class="navbar__link {% if request.path == '/calibrate' %}navbar__link--active{% endif %}">
+                    Calibrate
+                </a>
+            </li>
+            <li>
+                <a href="/debug" class="navbar__link {% if request.path == '/debug' %}navbar__link--active{% endif %}">
+                    🔬 Debug
+                </a>
+            </li>
+            <li>
+                <button onclick="if(confirm('Are you sure you want to shut down the server?')) { fetch('/shutdown', {method: 'POST'}).then(() => document.body.innerHTML = '<h1 style=\'text-align:center;margin-top:20%;\'>Server Shut Down Successfully</h1>'); }" class="navbar__link" style="background: none; border: none; cursor: pointer; color: #ff4d4d;">
+                    ⏻ Exit
+                </button>
+            </li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 Neonatal Jaundice Pipeline — Raspberry Pi</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
