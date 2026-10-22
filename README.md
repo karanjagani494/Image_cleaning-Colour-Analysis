@@ -1,535 +1,339 @@
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=32&pause=1000&color=C51A4A&center=true&vCenter=true&width=600&lines=🩺+Jaundice+Pi;Neonatal+Jaundice+Detection;Raspberry+Pi+%2B+Dermatoscope" alt="Typing SVG" />
+# 🩺 Jaundice Pi
+### Skin Imaging & Colour Analysis
 
-<br/>
+**A final-year research project combining MATLAB image processing with a Python camera application for Raspberry Pi.**
 
-**A Raspberry Pi system for real-time neonatal skin imaging and CIE Lab colour analysis.**  
-*Built with a USB digital dermatoscope, Flask web interface, and a full computer vision pipeline.*
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![MATLAB](https://img.shields.io/badge/MATLAB-0076A8?style=for-the-badge)
+![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
+![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white)
+![Raspberry Pi](https://img.shields.io/badge/Raspberry_Pi-C51A4A?style=for-the-badge&logo=raspberrypi&logoColor=white)
+![Research Prototype](https://img.shields.io/badge/Status-Research_Prototype-F59E0B?style=for-the-badge)
 
-<br/>
-
-![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-Web%20Server-000000?style=for-the-badge&logo=flask&logoColor=white)
-![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white)
-![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-Hardware-C51A4A?style=for-the-badge&logo=raspberry-pi&logoColor=white)
-![scikit-image](https://img.shields.io/badge/scikit--image-Image%20Processing-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
-![MATLAB](https://img.shields.io/badge/MATLAB-Pipeline%20Origin-0076A8?style=for-the-badge&logo=mathworks&logoColor=white)
-![License](https://img.shields.io/badge/License-Academic-green?style=for-the-badge)
+**Capture → Calibrate → Clean → Segment → Measure**
 
 </div>
 
 ---
 
-## 📋 Table of Contents
+## 📋 Contents
 
-- [Overview](#-overview)
-- [MATLAB Origin](#-matlab-origin--python-translation)
-- [Tech Stack](#-tech-stack)
-- [How It Works](#-how-it-works)
-- [Hardware Required](#-hardware-required)
-- [Project Structure](#-project-structure)
-- [Installation on Raspberry Pi](#-installation-on-raspberry-pi)
-- [Colour Calibration](#-colour-calibration-run-once)
-- [Starting the System](#-starting-the-system)
-- [Connecting via Web Browser (Headless Pi)](#-connecting-via-web-browser-headless-pi)
-- [Using the Web Interface](#-using-the-web-interface)
-- [Application Pages](#-application-pages)
-- [Pipeline Flow](#%EF%B8%8F-capture-pipeline-flow)
-- [Performance](#-performance-benchmarks)
-- [Troubleshooting](#-troubleshooting)
+- [Overview](#overview)
+- [Repository layout](#repository-layout)
+- [Implemented features](#implemented-features)
+- [Processing pipeline](#processing-pipeline)
+- [Python setup](#python-setup)
+- [Camera calibration](#camera-calibration)
+- [Web interface](#web-interface)
+- [MATLAB prototype](#matlab-prototype)
+- [Statistical analysis](#statistical-analysis)
+- [Configuration and outputs](#configuration-and-outputs)
+- [Limitations](#limitations)
+- [Troubleshooting](#troubleshooting)
 
----
+<a id="overview"></a>
+## 🔬 Overview
 
-## 🩺 Overview
+This project explores skin image processing and colour measurement in the context of neonatal jaundice research. A USB dermatoscope captures close-up images, and an image-processing pipeline extracts **CIE L\*a\*b\*** and RGB statistics from selected skin pixels.
 
-Jaundice Pi is a non-invasive neonatal jaundice screening tool. It uses a USB digital dermatoscope connected to a Raspberry Pi to capture close-up skin images and extract **CIE Lab colour values** — specifically the **b\* (yellow-blue axis)** which correlates with bilirubin levels in neonatal jaundice assessment.
+The repository includes two implementations:
 
-The system runs a fully automated image processing pipeline and presents results through a clean browser-based web interface — no monitor or keyboard is needed on the Pi itself.
+| Folder | Implementation | Purpose |
+| :--- | :--- | :--- |
+| [`Prototype/`](Prototype/) | MATLAB | Algorithm development, five-position capture and colour-consistency comparisons |
+| [`Jaundice_Pi/`](Jaundice_Pi/) | Python + Flask | Camera capture, image processing, browser-based results and Raspberry Pi deployment scripts |
 
-> ⚕️ *This system is a research prototype intended for academic and investigatory use. It is not a certified medical device.*
+> 🧪 **Research scope:** The implemented outputs are colour measurements, processed images and quality metrics. This repository does not establish a validated bilirubin estimator or clinical diagnostic accuracy. It is an academic prototype, not a certified medical device.
 
----
+<a id="repository-layout"></a>
+## 📂 Repository Layout
 
-## 📁 MATLAB Project Structure (Original Prototype)
-
-The original algorithm was developed in MATLAB before being translated to this Python/Raspberry Pi system. The MATLAB project is structured as follows:
-
-```
-MATLAB_Prototype/
-│
-├── main.m                    ← 🚀 Entry point — runs the full pipeline on an image
-├── params.m                  ← ⚙️  All algorithm parameters (equivalent to config/settings.py)
-│
-├── hairRemoval.m             ← ✂️  Hair strand detection and inpainting
-├── preprocessImage.m         ← 🧹 Noise reduction, CLAHE, sharpening on L-channel
-├── maskSkin.m                ← 🎭 Multi-layer skin pixel segmentation
-├── imageROI.m                ← 🎯 Fixed-position region of interest cropping
-├── shadingCorrect.m          ← 💡 Retinex-style illumination field correction
-├── extractColourStats.m      ← 📈 Mean/Std CIE Lab extraction on masked pixels
-├── applyCCM.m                ← 🎨 Apply Colour Correction Matrix (RGB → Lab)
-│
-└── data/
-    └── DGK_Lab_refs.mat      ← 🎨 18-patch DGK colour card CIE Lab reference values
-```
-
-### MATLAB Pipeline Order (`main.m`)
-
-```matlab
-% 1. Load raw image
-Iraw = imread(imagePath);
-
-% 2. Colour correction OR shading correction (mutually exclusive)
-if useCCM
-    shading_out = applyCCM(Iraw, CCM);      % RGB → calibrated Lab
-else
-    shading_out = shadingCorrect(Iraw);      % RGB → Lab (uncalibrated)
-end
-
-% 3. Hair removal
-cl_out = hairRemoval(shading_out, params, verbose);
-
-% 4. Preprocessing (noise, CLAHE, sharpen — all off by default)
-processed_img = preprocessImage(cl_out, params);
-
-% 5. ROI extraction (fixed position)
-ROI_img = imageROI(processed_img);
-
-% 6. Skin masking
-[skinMask, ~] = maskSkin(ROI_img, params.mask);
-
-% 7. Colour statistics
-statsArray(i) = extractColourStats(ROI_img, skinMask);
-```
-
-### Key MATLAB Parameters (`params.m`)
-
-| Parameter | MATLAB Name | Python Equivalent | Default |
-|:---|:---|:---|:---:|
-| Hair SE scale | `params.hair.seScale` | `HAIR_SE_SCALE` | `0.05` |
-| Hair min area | `params.hair.minArea` | `HAIR_MIN_AREA` | `20` |
-| Hair max coverage | `params.hair.maxMaskPct` | `HAIR_MAX_MASK_PCT` | `0.40` |
-| Skin L low | `params.mask.skin_L_low` | `SKIN_L_LOW` | `30` |
-| Skin L high | `params.mask.skin_L_high` | `SKIN_L_HIGH` | `92` |
-| Pore L threshold | `params.mask.pore_L` | `SKIN_PORE_L` | `45` |
-| Use Gaussian | `params.noise.useGaussian` | `NOISE_USE_GAUSSIAN` | `false` |
-| Use CLAHE | `params.contrast.useCLAHE` | `CONTRAST_USE_CLAHE` | `false` |
-| Use sharpen | `params.sharpen.useSharpen` | `SHARPEN_ENABLE` | `false` |
-
-> 📌 *If you have access to the original MATLAB source files, the full `.m` code can be viewed alongside this Python implementation to compare the translation directly.*
-
----
-
-## 🔬 MATLAB Origin & Python Translation
-
-The image processing pipeline in this project is a **direct Python translation of an original MATLAB prototype**. The MATLAB codebase served as the algorithmic reference — every processing stage in Python replicates the exact behaviour of its MATLAB equivalent.
-
-| MATLAB Function | Python Module | What It Does |
-|:---|:---|:---|
-| `hairRemoval.m` | `src/hair_removal/hair_removal.py` | Line-morphology hair detection + inpainting |
-| `preprocessImage.m` | `src/preprocessing/preprocess.py` | Gaussian, CLAHE, sharpening on L-channel |
-| `maskSkin.m` | `src/mask_skin/mask_skin.py` | Multi-layer pixel-rule skin segmentation |
-| `imageROI.m` | `src/utilities/roi.py` | Region of interest extraction (improved: hair-aware grid search) |
-| `shadingCorrect.m` | `src/preprocessing/shading_correct.py` | Retinex-style illumination correction |
-| `extractColourStats.m` | `src/utilities/colour_stats.py` | Mean/Std Lab extraction on masked pixels |
-| `applyCCM.m` | `src/colour_calib/colour_calib.py` | Colour Correction Matrix application (RGB → Lab) |
-
-**Key translation decisions:**
-
-- MATLAB's `strel('line')` → replaced with `cv2.line` drawn kernels for morphological hair closing
-- MATLAB's `mat2gray` normalisation → replicated using min-max scaling before Otsu threshold
-- MATLAB's `regionfill` → replaced with `cv2.inpaint` using TELEA algorithm (two-pass)
-- MATLAB's `adapthisteq` → replaced with `cv2.createCLAHE` on the L-channel only
-- MATLAB's `graythresh` (Otsu) → replaced with `cv2.THRESH_OTSU`
-- ROI selection improved beyond MATLAB: Python uses a **mole-aware grid search** rather than a fixed position
-
-> 📌 The MATLAB pipeline was developed as the original research prototype. This Python implementation matches it stage-for-stage, with select improvements noted above for the embedded Raspberry Pi environment.
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology | Role |
-|:---|:---|:---|
-| **Backend** | ![Flask](https://img.shields.io/badge/Flask-000?style=flat-square&logo=flask&logoColor=white) **Flask** | Python web framework — handles all HTTP routes, camera streaming (MJPEG), and pipeline triggering |
-| **Image Processing** | ![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?style=flat-square&logo=opencv&logoColor=white) **OpenCV** | Morphological operations, Gaussian blur, bilateral filter, inpainting, colour space conversion |
-| **Colour Science** | **scikit-image** | CIE Lab ↔ RGB ↔ XYZ conversion, SSIM calculation |
-| **Numerical** | **NumPy** | Matrix operations, least-squares CCM fitting, statistical extraction |
-| **Data Export** | **openpyxl** | Writing per-capture Lab values to `metadata.xlsx` |
-| **Frontend** | **HTML / CSS / JavaScript** | Jinja2 templates rendered by Flask, MJPEG stream displayed in browser, fetch API for async capture |
-| **Hardware Interface** | **OpenCV VideoCapture** | Reads frames from the USB dermatoscope via V4L2 on Linux |
-| **Deployment** | **systemd** | Auto-starts the Flask server on Pi boot via `jaundice-pi.service` |
-| **Algorithm Origin** | ![MATLAB](https://img.shields.io/badge/MATLAB-0076A8?style=flat-square&logo=mathworks&logoColor=white) **MATLAB** | Original prototype pipeline — fully translated to Python |
-
-### Flask Web Server Architecture
-
-The Flask application in `app.py` serves five main page routes and a set of API endpoints:
-
-```
-Browser Request
-      ↓
-Flask Route (app.py)
-      ├── GET  /              → renders capture.html  (live feed page)
-      ├── GET  /gallery       → renders gallery.html
-      ├── GET  /results       → renders results.html
-      ├── GET  /calibrate     → renders calibrate.html
-      ├── GET  /debug         → renders debug.html
-      ├── GET  /video_feed    → MJPEG stream (multipart/x-mixed-replace)
-      ├── POST /capture       → grabs frame → runs pipeline → returns JSON
-      ├── POST /debug_pipeline→ runs stage-by-stage → returns base64 images
-      ├── GET  /api/results   → returns all metadata rows as JSON
-      └── GET  /export/metadata.xlsx → sends file download
-```
-
-The camera is managed by a **background thread** (`VideoCamera` in `src/utilities/camera.py`) so the live MJPEG stream and the capture endpoint never block each other.
-
----
-
-## ⚙️ How It Works
-
-```
-📷 Dermatoscope → Raspberry Pi → Flask Web Server → Browser on Any Device
-                                       ↓
-                    Raw Image → Hair Removal → CCM Colour Calibration
-                             → ROI Selection → Skin Masking
-                             → L* a* b* Extraction → Results Saved
-```
-
-The **b\*** value (yellow component of Lab) is the primary output. Elevated b\* indicates increased skin yellowing, which corresponds with higher bilirubin levels in neonatal jaundice.
-
----
-
-## 🔌 Hardware Required
-
-| Component | Details |
-|:---|:---|
-| 🍓 **Raspberry Pi** | Model 3B+, 4, or 5 — Pi 4/5 recommended |
-| 🔬 **USB Digital Dermatoscope** | 640×640 resolution, built-in LED ring light |
-| 💾 **MicroSD Card** | 16 GB minimum, Class 10 |
-| 🌐 **Wi-Fi Network** | Pi and viewing device on same network |
-| 🎨 **DGK Colour Card** | 18-patch colour card for CCM calibration |
-
----
-
-## 📂 Project Structure
-
-```
-jaundice_pi/
-│
-├── app.py                    ← 🌐 Flask web server (all routes)
-├── main.py                   ← 🚀 Entry point
-├── requirements.txt
+```text
+Image_cleaning-Colour-Analysis/
 ├── README.md
-│
-├── config/
-│   └── settings.py           ← ⚙️  All tunable parameters (camera, pipeline thresholds)
-│
-├── src/                      ← 🧠 Image processing pipeline
-│   ├── colour_calib/         ← 🎨 Colour calibration (CCM)
-│   │   ├── calibrate.py      ←     Run once to build the matrix
-│   │   ├── colour_calib.py   ←     CCM computation & application
-│   │   └── dgk_lab.py        ←     DGK 18-patch Lab reference values
-│   ├── hair_removal/         ← ✂️  Morphological hair detection + inpainting
-│   │   └── hair_removal.py
-│   ├── mask_skin/            ← 🎭 Multi-layer skin segmentation
-│   │   └── mask_skin.py
-│   ├── preprocessing/        ← 🧹 Blur check, denoising, shading correction
-│   │   ├── blur_check.py
-│   │   ├── preprocess.py
-│   │   └── shading_correct.py
-│   ├── pipeline/             ← 🚦 Full pipeline orchestration
-│   │   ├── runner.py
-│   │   └── debug_runner.py
-│   └── utilities/            ← 🧰 Camera, ROI, stats, metadata helpers
-│       ├── camera.py
-│       ├── colour_stats.py
-│       ├── data_manager.py
-│       ├── io_utils.py
-│       ├── metadata.py
-│       └── roi.py
-│
-├── templates/                ← 🖥️  Jinja2 HTML pages
-│   ├── base.html
-│   ├── capture.html          ←     📸 Page 1 — Live capture
-│   ├── gallery.html          ←     🖼️  Page 2 — Image gallery
-│   ├── results.html          ←     📊 Page 3 — Data table
-│   ├── calibrate.html        ←     🎨 Page 4 — Calibration guide
-│   └── debug.html            ←     🐛 Page 5 — Pipeline debug view
-│
-├── static/
-│   ├── css/style.css
-│   └── js/app.js
-│
-├── scripts/                  ← 🛠️  Deployment scripts
-│   ├── setup.sh              ←     One-shot Pi setup
-│   ├── start.sh              ←     Start the server
-│   └── jaundice-pi.service   ←     systemd auto-start service
-│
-└── data/                     ← 🗄️  Runtime data (gitignored)
-    ├── raw_images/
-    ├── processed_images/
-    └── results/
-        ├── ccm.npz           ← 🧮 Saved Colour Correction Matrix
-        └── metadata.xlsx     ← 📈 Per-capture Lab statistics log
+├── Prototype/                      # MATLAB implementation
+│   ├── config/
+│   │   ├── params.m                # Processing parameters
+│   │   └── paths.m                 # Data/output paths
+│   ├── src/
+│   │   ├── main.m                  # Capture and analysis workflow
+│   │   ├── calibrateCamera.m
+│   │   ├── ColourCalib/            # Colour-card sampling and CCM
+│   │   ├── hair_removal/
+│   │   ├── preprocessing/
+│   │   └── utilities/              # Capture, ROI, statistics, Excel
+│   └── FOV.m
+└── Jaundice_Pi/                     # Python/Raspberry Pi implementation
+    ├── app.py                      # Flask routes and server
+    ├── main.py                     # Application entry point
+    ├── requirements.txt
+    ├── statistical_analysis.py
+    ├── config/settings.py
+    ├── src/
+    │   ├── colour_calib/
+    │   ├── hair_removal/
+    │   ├── mask_skin/
+    │   ├── pipeline/               # Capture and debug pipelines
+    │   ├── preprocessing/
+    │   └── utilities/
+    ├── templates/                  # Capture, gallery, results, calibration, debug
+    ├── static/                     # CSS and JavaScript
+    └── scripts/                    # Setup, start and systemd template
 ```
 
----
+Runtime data directories are created or populated during use; a fitted calibration matrix and capture results are not supplied as a ready-to-use dataset.
 
-## 🚀 Installation on Raspberry Pi
+<a id="implemented-features"></a>
+## ✨ Implemented Features
 
-### Step 1 — Copy the Project
+| Area | Features |
+| :--- | :--- |
+| 📷 **Acquisition** | USB camera capture; Python live MJPEG preview; MATLAB five-position capture |
+| 🎨 **Colour processing** | DGK 18-patch calibration, colour correction matrix and shading correction fallback |
+| 🧹 **Image cleaning** | Sharpness check, morphological hair detection, inpainting and configurable preprocessing |
+| 🎯 **Skin selection** | Automatic region-of-interest search and skin masking |
+| 📊 **Measurements** | Mean/std L\*, a\*, b\* and RGB; pixel count and coverage; Python b\* coefficient of variation |
+| 🔍 **Comparisons** | Raw/processed SSIM; MATLAB inter-position colour differences, ΔE and SSIM |
+| 🌐 **Interface** | Flask capture, gallery, results, calibration guidance and stage-by-stage debug pages |
+| 💾 **Storage** | Raw/processed images and Excel metadata export |
 
-Transfer the project folder onto the Raspberry Pi using a USB drive, `scp`, or by cloning from this repository:
+The implementations share the overall workflow but use different defaults and some different algorithms. They should not be assumed to produce identical numerical results.
+
+<a id="processing-pipeline"></a>
+## 🛤️ Processing Pipeline
+
+```mermaid
+flowchart TD
+    A[Capture and save image] --> B{Sharpness check}
+    B -->|Fail| C[Refocus and recapture]
+    B -->|Pass| D{Saved calibration available?}
+    D -->|Yes| E[Apply colour correction matrix]
+    D -->|No| F[Shading correction fallback]
+    E --> G[Hair removal in Lab space]
+    F --> G
+    G --> H[Configured preprocessing]
+    H --> I[Automatic ROI selection]
+    I --> J[Skin masking]
+    J --> K[Extract colour statistics]
+    K --> L[Save processed image and Excel metadata]
+    L --> M[Display results in browser]
+```
+
+The Python pipeline rejects blurry captures and returns an error when skin coverage is too low. MATLAB offers a retry/continue interaction for blurry images. Colour correction and shading fallback are alternative branches, rather than sequential stages.
+
+<a id="python-setup"></a>
+## 🚀 Python Setup — Raspberry Pi
+
+### Hardware and software
+
+- Raspberry Pi with a compatible Raspberry Pi OS/Linux installation.
+- USB digital dermatoscope or OpenCV-compatible USB camera; current Python settings request **640 × 640** frames.
+- DGK 18-patch colour card for calibration.
+- Python 3 and a virtual environment compatible with the packages in `requirements.txt`.
+- A browser on the Pi or another device on the same network.
+- A graphical desktop/display for the interactive OpenCV calibration procedure.
+
+### Clone and enter the Python application
 
 ```bash
-git clone <repo-url> jaundice_pi
-cd jaundice_pi
+git clone https://github.com/karanjagani494/Image_cleaning-Colour-Analysis.git
+cd Image_cleaning-Colour-Analysis/Jaundice_Pi
 ```
 
-### Step 2 — Run the Setup Script
+### Install dependencies
 
-Run the setup script which installs all system packages and Python dependencies automatically:
+The repository provides a Raspberry Pi setup script:
 
 ```bash
 bash scripts/setup.sh
 ```
 
-This script performs the following in sequence:
+It installs system packages, creates `venv/`, installs Python dependencies and creates data folders. Its Linux package names may need adjustment for your OS release.
 
-| Step | Action |
-|:---:|:---|
-| 1/5 | Installs system packages — OpenCV, HDF5, image libraries via `apt` |
-| 2/5 | Creates a Python virtual environment at `./venv` |
-| 3/5 | Installs all Python packages from `requirements.txt` |
-| 4/5 | Creates data directories (`raw_images`, `processed_images`, `results`) |
-| 5/5 | Sets executable permissions on `start.sh` |
-
-<details>
-<summary>📋 Manual installation (alternative)</summary>
+Alternatively, with Python, venv support and required camera/OpenCV system libraries installed:
 
 ```bash
-sudo apt update && sudo apt install -y \
-    python3 python3-pip python3-venv \
-    libopencv-dev libatlas-base-dev \
-    libhdf5-dev libhdf5-serial-dev \
-    libopenjp2-7 libjpeg-dev libpng-dev v4l-utils
-
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
-mkdir -p data/raw_images data/processed_images data/results
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-</details>
-
----
-
-## 🎨 Colour Calibration (Run Once)
-
-Before capturing any patient images, the camera must be calibrated using the **DGK 18-patch colour card**. This generates a **Colour Correction Matrix (CCM)** which maps the camera's raw RGB output to accurate CIE Lab values.
+Dependencies include Flask, NumPy, OpenCV, scikit-image, SciPy, pandas, openpyxl and Pillow. The optional analysis plotting command also requires Matplotlib, which is not currently listed in `requirements.txt`:
 
 ```bash
-source venv/bin/activate
-python calibrate.py
+python -m pip install matplotlib
 ```
 
-The terminal will walk through each of the 18 colour patches one at a time:
+### Start the application
 
-1. Point the dermatoscope at the patch shown in the terminal
-2. Press `SPACE` in the preview window to capture a sample
-3. Draw a rectangle around the flat centre of the patch and press `ENTER`
-4. Repeat 10 times per patch
+From `Jaundice_Pi/`, with the virtual environment active:
 
-The completed matrix is saved to `data/results/ccm.npz` and used automatically on every future capture.
+```bash
+python main.py
+```
 
-> 💡 **Calibration only needs to be done once**, or whenever the camera or lighting conditions change significantly.
-
----
-
-## ▶️ Starting the System
-
-Once setup and calibration are complete, start the web server with:
+Or use the supplied launcher:
 
 ```bash
 bash scripts/start.sh
 ```
 
-The terminal will confirm the server is running and display the address:
+Open **http://localhost:5050** on the Pi, or **http://<pi-ip>:5050** from another device on the same network. Use `hostname -I` on the Pi to find its address. Stop the foreground server with `Ctrl+C`.
 
+<a id="camera-calibration"></a>
+## 🎨 Camera Calibration
+
+From `Jaundice_Pi/`:
+
+```bash
+source venv/bin/activate
+python -m src.colour_calib.calibrate
 ```
-╔══════════════════════════════════════════╗
-║   Jaundice Pi — Web Server               ║
-╠══════════════════════════════════════════╣
-║   http://localhost:5050                  ║
-║   http://192.168.x.x:5050               ║
-╚══════════════════════════════════════════╝
-```
 
-### Auto-Start on Boot (Optional)
+Follow the terminal and OpenCV window prompts:
 
-To make the system start automatically whenever the Pi powers on:
+1. Present the requested colour-card patch under your capture lighting.
+2. Press **Enter** when prompted to open the preview.
+3. Press **Space** to capture.
+4. Select a rectangle inside the patch and confirm with **Enter**.
+5. Complete the requested samples for all 18 patches. The configured sample count is 10 per patch.
+
+The fitted matrix is saved as `data/results/ccm.npz`. Repeat calibration when the camera or lighting conditions change. The web calibration page provides guidance/status; the interactive sampling procedure requires graphical windows.
+
+Without the matrix, the capture pipeline uses its shading-correction fallback and flags calibration as skipped. Those measurements should not be described as calibrated results.
+
+### Optional automatic startup
+
+A systemd template is provided at `scripts/jaundice-pi.service`. **Edit it before installing:** replace `User`, `WorkingDirectory` and `ExecStart` with your actual Pi username and absolute application/virtual-environment paths. The supplied `/home/pi/jaundice_webapp` paths are placeholders for a different installation location.
+
+After editing the file:
 
 ```bash
 sudo cp scripts/jaundice-pi.service /etc/systemd/system/
-sudo systemctl enable jaundice-pi
-sudo systemctl start jaundice-pi
+sudo systemctl daemon-reload
+sudo systemctl enable --now jaundice-pi
 ```
 
----
+<a id="web-interface"></a>
+## 🖥️ Web Interface
 
-## 🌐 Connecting via Web Browser (Headless Pi)
+| Route | Purpose |
+| :--- | :--- |
+| `/` | Live camera preview, body-location label and capture/analysis |
+| `/gallery` | Captured/processed image gallery |
+| `/results` | Recorded measurements |
+| `/calibrate` | Calibration guidance and status |
+| `/debug` | Intermediate processing stages |
+| `/export/metadata.xlsx` | Download recorded metadata |
 
-The Raspberry Pi runs in **headless mode** — no screen, mouse, or keyboard is attached. The entire interface is accessed through a browser on any device connected to the same Wi-Fi network.
+To capture an image, enter a body-location label, position and focus the camera, then use **Capture & Analyse**. Review the measured colour values, coverage, image similarity and stage timings in the interface.
 
-### Find the Pi's IP Address
+<a id="matlab-prototype"></a>
+## 🧮 MATLAB Prototype
 
-Run this on the Pi terminal (via SSH or directly):
+Use MATLAB with Image Processing Toolbox and the USB webcam support required by `webcam`. The exact MATLAB release/toolbox combination has not been specified in this repository.
+
+1. Set MATLAB's current folder to `Prototype/`.
+2. Check `config/paths.m` and create the runtime folders if needed:
+
+```matlab
+addpath(genpath("src"));
+addpath("config");
+mkdir(fullfile("data", "raw_images"));
+mkdir(fullfile("data", "processed_images"));
+mkdir(fullfile("data", "results"));
+mkdir(fullfile("data", "colourCard"));
+```
+
+3. Check the camera name against `webcamlist`; the capture code currently names `USB2.0 UVC PC Camera`.
+4. Run `src/calibrateCamera.m` to perform colour calibration, following its interactive prompts.
+5. Run `src/main.m` for the capture/analysis workflow.
+
+The main script captures five body locations, checks image sharpness, performs processing and ROI selection, extracts masked colour statistics, compares positions and exports metadata. It uses `data/results/ccm.mat` when available, otherwise the shading-correction branch.
+
+The current MATLAB ROI selection uses a skin-mask-assisted grid search. MATLAB and Python parameter defaults differ; consult `Prototype/config/params.m` and `Jaundice_Pi/config/settings.py` directly.
+
+<a id="statistical-analysis"></a>
+## 📈 Statistical Analysis
+
+`Jaundice_Pi/statistical_analysis.py` provides exploratory pre/post comparisons, per-channel tests, CIE76 ΔE calculations and optional plots:
 
 ```bash
-hostname -I
+# From Jaundice_Pi/, with dependencies installed
+python statistical_analysis.py --file data/results/metadata.xlsx
+python statistical_analysis.py --file data/results/metadata.xlsx --plot
 ```
 
-This will output something like `192.168.1.42`. Note this address.
+> 🟠 **Integration limitation:** The metadata writer accepts optional pre-processing measurements, but the main capture pipeline currently calls it without supplying those measurements. If the required `pre_mean_L`, `pre_mean_a` and `pre_mean_b` columns are absent, the analysis script switches to explicitly labelled **simulated demo data**. Demo output is not experimental evidence.
 
-### Connect from Any Device
+The script currently selects a paired t-test or Mann–Whitney U test based on normality checks of the two groups. Review this methodology for paired observations before using the output in research conclusions. A non-significant result alone does not establish colour preservation.
 
-Open a browser on a **laptop, phone, or tablet** on the same Wi-Fi network and go to:
+<a id="configuration-and-outputs"></a>
+## ⚙️ Configuration & Outputs
 
-```
-http://<Pi-IP-Address>:5050
-```
+Python parameters live in **`Jaundice_Pi/config/settings.py`**:
 
-**Example:** `http://192.168.1.42:5050`
+| Setting | Current default |
+| :--- | :--- |
+| Camera index | `0` |
+| Requested capture size | `640 × 640` |
+| Blur threshold | `30` |
+| ROI size | `150 × 150` |
+| Gaussian preprocessing | Enabled |
+| CLAHE / sharpening | Disabled |
+| Calibration samples per patch | `10` |
 
-> 📱 This works on any device — Windows, Mac, iPhone, Android. No app installation needed.
+Each implementation uses runtime data under its own working directory:
 
-### Connecting via SSH (for terminal access)
-
-To access the Pi terminal remotely from another machine:
-
-```bash
-ssh pi@192.168.1.42
-```
-
-Replace `192.168.1.42` with your Pi's actual IP address. The default password is `raspberry` unless changed.
-
----
-
-## 📸 Using the Web Interface
-
-### Capturing and Analysing an Image
-
-1. Open the web interface in a browser (`http://<Pi-IP>:5050`)
-2. The **Capture** page loads with a live camera feed from the dermatoscope
-3. Enter the **body part location** (e.g. `forehead`, `chest`, `palm`) in the text field
-4. Position the dermatoscope flat against the skin
-5. Click **Capture & Analyse**
-
-The system automatically runs the full pipeline and displays results on screen:
-
-| Output | Description |
-|:---|:---|
-| **L\*** | Lightness value (0 = black, 100 = white) |
-| **a\*** | Red-green axis |
-| **b\*** | Yellow-blue axis — primary jaundice indicator |
-| **Coverage** | Percentage of clean skin pixels in the ROI |
-| **SSIM Score** | Structural similarity — measures how much hair removal changed the image |
-| **Colour Swatch** | Visual preview of the measured skin colour |
-| **Stage Timings** | Time taken by each pipeline stage in milliseconds |
-
----
-
-## 🖥️ Application Pages
-
-| Page | URL | Description |
-|:---|:---|:---|
-| 📸 **Capture** | `/` | Live camera feed, body part input, capture button, instant Lab results |
-| 🖼️ **Gallery** | `/gallery` | Grid view of all processed images with Lab value chips |
-| 📊 **Results** | `/results` | Full data table of all captures with export button |
-| 🎨 **Calibrate** | `/calibrate` | Step-by-step calibration instructions and CCM status |
-| 🐛 **Debug** | `/debug` | Stage-by-stage pipeline visualisation — shows intermediate images at each step |
-| 📥 **Export** | `/export/metadata.xlsx` | Direct download of the full results spreadsheet |
-
----
-
-## 🛤️ Capture Pipeline Flow
-
-Every time an image is captured, it passes through this automated sequence:
-
-```
-📷 Raw Frame Captured
-        ↓
-🔍 Blur Check  ──── fails ──→  ❌ "Image too blurry" error returned
-        ↓ pass
-🧮 Colour Correction Matrix (CCM)  →  Converts RGB → CIE Lab
-        ↓
-✂️  Hair Removal  →  Line-morphology detection + TELEA inpainting
-        ↓
-🧹 Preprocessing  →  Gaussian filter on L-channel (Dermatoscope: on by default)
-        ↓
-🎯 ROI Selection  →  Mole-aware grid search for cleanest skin patch
-        ↓
-🎭 Skin Masking  →  Multi-layer filter (dark pixels, bright pixels, colour rule, pores)
-        ↓
-📈 Colour Stats  →  Mean/Std of L*, a*, b* on clean skin pixels only
-        ↓
-💾 Save Outputs  →  Processed image + metadata.xlsx updated
-        ↓
-✅ JSON Response  →  Web UI updates instantly
+```text
+data/
+├── raw_images/
+├── processed_images/
+└── results/
+    ├── ccm.npz or ccm.mat       # Python / MATLAB calibration
+    └── metadata.xlsx            # Measurement export
 ```
 
----
+**L\*** measures lightness, **a\*** the green/red axis, and **b\*** the blue/yellow axis. These are colour coordinates; the application does not convert them into a validated bilirubin concentration.
 
-## 🏎️ Performance Benchmarks
+<a id="limitations"></a>
+## 🧪 Current Limitations
 
-| Device | Average Pipeline Time | Notes |
-|:---|:---:|:---|
-| 🍓 **Raspberry Pi 5** | `~1–2 s` | Excellent — recommended for clinical use |
-| 🍓 **Raspberry Pi 4** (4 GB) | `~3–5 s` | Good, comfortable for regular use |
-| 🍓 **Raspberry Pi 3B+** | `~10–18 s` | Workable — expect a noticeable delay |
-| 🍓 **Raspberry Pi Zero 2W** | `~30–50 s` | Very slow, use loading indicators |
+- Camera hardware, lighting, focus and calibration affect the measurements.
+- No reproducible cross-device performance benchmark is supplied; stage timings are available for measuring your own setup.
+- The Python server is a development/research application, with no authentication layer implemented for public deployment. The provided startup binds it to the network on port 5050.
+- Initial camera calibration is interactive and requires a graphical display, even if later browser operation is headless.
+- Pre/post statistical analysis is not fully connected to the main capture workflow.
+- Python and MATLAB results have not been demonstrated to be numerically equivalent.
+- The repository does not include clinical validation, a trained bilirubin prediction model or diagnostic decision thresholds.
 
----
-
+<a id="troubleshooting"></a>
 ## 🔧 Troubleshooting
 
-| Problem | Solution |
-|:---|:---|
-| ❌ **Camera not detected** | Run `ls /dev/video*` — verify `CAMERA_INDEX` in `config/settings.py` |
-| ❌ **Pipeline import errors** | Run `source venv/bin/activate && pip install -r requirements.txt` |
-| ❌ **No CCM calibration warning** | Run `python calibrate.py` before capturing any images |
-| ❌ **Always fails blur check** | Lower `QC_BLUR_THRESHOLD` in `settings.py` (try `10`) |
-| ❌ **Port 5050 already in use** | Run `sudo lsof -i :5050` and `kill -9 <PID>` to free it |
-| ❌ **Cannot connect from browser** | Confirm both devices are on the same Wi-Fi — check `hostname -I` on Pi |
-| ❌ **Black camera feed in browser** | Wait 5–10 seconds — USB dermatoscope needs warm-up time |
-| ❌ **SSH connection refused** | Enable SSH: `sudo systemctl enable ssh && sudo systemctl start ssh` |
-
----
-
-## 📦 Python Dependencies
-
-```
-flask
-opencv-python
-numpy
-scikit-image
-openpyxl
-```
-
-Install all with:
-```bash
-pip install -r requirements.txt
-```
+| Problem | Check |
+| :--- | :--- |
+| Camera not detected | Check the USB connection, `/dev/video*`, camera permissions and `CAMERA_INDEX`. |
+| Calibration window unavailable | Run the calibration procedure in a graphical desktop session. |
+| Calibration file missing | Run `python -m src.colour_calib.calibrate` from `Jaundice_Pi/`. |
+| Import/dependency error | Activate the correct virtual environment and install `requirements.txt`. |
+| `matplotlib` missing | Install it in the active environment before using the analysis script. |
+| Capture rejected as blurry | Improve focus and lighting; review the measured variance before tuning the threshold. |
+| Low skin coverage | Reposition the camera and review the debug page and mask settings. |
+| Browser cannot connect | Check the printed address, port 5050, network connection and whether the server is running. |
+| systemd fails to start | Check the edited service paths/user and inspect `journalctl -u jaundice-pi`. |
 
 ---
 
 <div align="center">
 
-**Built as part of a Final Year Engineering Project**  
-*Anglia Ruskin University — 2025/2026*
+### 🎓 Final Year Engineering Project
+**Karan Jagani · Anglia Ruskin University · 2025/2026**
 
-![Made with Python](https://img.shields.io/badge/Made%20with-Python-3776AB?style=flat-square&logo=python&logoColor=white)
-![Runs on Raspberry Pi](https://img.shields.io/badge/Runs%20on-Raspberry%20Pi-C51A4A?style=flat-square&logo=raspberry-pi&logoColor=white)
-![Computer Vision](https://img.shields.io/badge/Computer%20Vision-OpenCV-5C3EE8?style=flat-square&logo=opencv&logoColor=white)
+*MATLAB research prototype → Python image processing → Raspberry Pi web application*
+
+[![Explore the Code](https://img.shields.io/badge/Explore_the_Code-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/karanjagani494/Image_cleaning-Colour-Analysis)
 
 </div>
